@@ -1,4 +1,5 @@
 # 规则
+# 规则
 Rule:
 # Feeb
 - DOMAIN-KEYWORD,epochtimes,REJECT
