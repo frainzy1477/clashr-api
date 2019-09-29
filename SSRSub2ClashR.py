@@ -1,99 +1,91 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
+
+#############################################
+
+#  将SSR订阅转为ClashR    By PartnerOfmE
+
+#############################################
+
 import requests
 import base64
 import codecs
-
 
 def getBasefile(url):  # 获取链接文本
     try:
         html = requests.get(url)
         html.raise_for_status
         html.encoding = html.apparent_encoding
-        return str(html.text)
-
     except Exception as e:
         print('getBasefile Error:', e)
+    else:
+        print('从'+ url + '获取文本成功...')
+        return str(html.text)
+        
 
 
-
-def getAllLinks(url):  # 从加密文本解析出所有ssr链接
+def getAllLinks(url):  # 从加密文本解码出所有ssr链接
     try:
-        links = getBasefile(url)      
-        result = decodeInfo(links)
-        alllinks = result.split('\\n')
-        if len(alllinks[-1]) < 10:
-            alllinks.pop()
-        return alllinks
-    
+        links = getBasefile(url)
+        alllinks = base64_decode(links)
     except Exception as e:
         print('getAllLinks Error:', e)
+    else:
+        print('从编码文本解码成功...')
+        return alllinks
 
 
 def getAllNodes(url):  # 从ssr链接汇总得到所有节点信息
     try:
         allnodes = []
-        links = getAllLinks(url)
+        links=getAllLinks(url).split('ssr://')
         
         for ssr in links:            
-            if len(ssr) > 10:
-                link = ssr.split('//')[1].split("'")[0]    # 不同订阅不同的切分形式                        
-                node = getNodeR(link)
+            if ssr:
+                node = getNodeR(ssr.replace('\n', ''))                
                 allnodes.append(node) 
-        return allnodes
 
     except Exception as e:
         print('getAllNodes Error:', e)
+    else:
+        print('获取所有节点信息成功...')
+        return allnodes
 
-
-
-def getNodeR(link):  # 从ssr链接中得到节点信息 如参数不对应在此调整
+def getNodeR(nodeinfo):  # 从ssr链接中得到节点信息 如参数不对应在此调整
     try:
         node_info = {}
+
+        info=base64_decode(nodeinfo)
         
-        info = decodeInfo(link)
+        front_val = info.split('/?')[0]
+        node_info['server'] = front_val.split(':')[0]
+        node_info['port'] = front_val.split(':')[1]
+        node_info['protocol'] = front_val.split(':')[2]
+        node_info['method'] = front_val.split(':')[3]
+        node_info['obfs'] = front_val.split(':')[4]
+        node_info['pwd'] = base64_decode(front_val.split(':')[5])
         
-        node_info['server'] = info.split(':')[0].split("'")[1]
-        node_info['port'] = info.split(':')[1]
-        node_info['pwd'] = decodeInfo(info.split('/')[0].split(':')[-1]).split("'")[1]
-        node_info['protocol'] = info.split(':')[2]
-        node_info['method'] = info.split(':')[3]
-        node_info['obfs'] = info.split(':')[4]
-        
-        last_val=info.split('/?')[1].split("'")[0]
-        for a in last_val.split('&'):
+        rear_val=info.split('/?')[1]
+        for a in rear_val.split('&'):
             b=a.split('=')[0]
-            c=getName(a.split('=')[1])
+            c=base64_decode(a.split('=')[1])
             node_info[b]=c
         
-        print(node_info)
+        #print(node_info)
         return node_info
 
     except Exception as e:
         print('getNodeR Error:', e)
 
-def getName(info):  # 得到节点名称
-    lens = len(info)
 
-    if lens % 4 == 1:
-        info = info + "==="
-    elif lens % 4 == 2:
-        info = info + "=="
-    elif lens % 4 == 3:
-        info = info + "="
-    result = base64.urlsafe_b64decode(info).decode('utf-8', errors='ignore')
-    return result
+def base64_decode(base64_encode_str):    # 解码加密内容
+    need_padding = len(base64_encode_str) % 4
+    
+    if need_padding !=0:
+        missing_padding = 4 - need_padding
+        base64_encode_str += '=' * missing_padding
 
-def decodeInfo(info):  # 解码加密内容
-    lens = len(info)
-    if lens % 4 == 1:
-        info = info + "==="
-    elif lens % 4 == 2:
-        info = info + "=="
-    elif lens % 4 == 3:
-        info = info + "="
-    result = str(base64.urlsafe_b64decode(info))
-    return result
+    return base64.urlsafe_b64decode(base64_encode_str).decode('utf-8')
 
 
 def setNodes(nodes):  # 设置SSR节点
@@ -106,6 +98,12 @@ def setNodes(nodes):  # 设置SSR节点
         pwd = node['pwd']
         protocol = node['protocol']
         obfs = node['obfs']
+        
+        if 'group' in node:
+            group = node['group']
+        else:
+            group = ''
+            
         if 'protoparam' in node:
             proparam = node['protoparam']
         else:
@@ -145,28 +143,40 @@ def setPG(nodes):  # 设置策略组 懂得可在下面自己编辑 反正我不
 
 
 def getClash(nodes):  #写文件
+    try:
+        rules = getBasefile('https://raw.githubusercontent.com/partnerofme/ClashR/master/Rule.yml')
+        gener = getBasefile('https://raw.githubusercontent.com/partnerofme/ClashR/master/General.yml')
+        
+    except Exception as e:
+        print('获取模板内容失败，可能是因为网络故障。退出...')
+        return
 
-    rules = getBasefile('https://raw.githubusercontent.com/partnerofme/ClashR/master/Rule.yml')
-    gener = getBasefile('https://raw.githubusercontent.com/partnerofme/ClashR/master/General.yml')
+    try:
+        filename='config.yml'
+        with codecs.open('./' + filename, "w",encoding = 'utf-8') as f:
+            f.writelines(gener)
 
-    with codecs.open("./config.yml", "w",encoding = 'utf-8') as f:
-        f.writelines(gener)
+        info = setNodes(nodes) + setPG(nodes)
+        with codecs.open('./' + filename, "a",encoding = 'utf-8') as f:
+            f.writelines(info)
 
-    info = setNodes(nodes) + setPG(nodes)
-    with codecs.open("./config.yml", "a",encoding = 'utf-8') as f:
-        f.writelines(info)
+        rule = rules.split('Rule:\n')[1]
+        with codecs.open('./' + filename, "a",encoding = 'utf-8') as f:
+            f.writelines(rule)
 
-    rule = rules.split('Rule:\n')[1]
-    with codecs.open("./config.yml", "a",encoding = 'utf-8') as f:
-        f.writelines(rule)
-
-
+    except Exception as e:
+        print('写入文件失败，原因:{}',format(e))
+    else:
+        print('写入文件' + filename +'完成。')
+        return
+              
 if __name__ == "__main__":
     try:
-        url = "http://urmine.getenjoyment.net/alluser.html"         #替换订阅地址 只支持SSR订阅
+        url = 'http://urmine.getenjoyment.net/alluser.html'        #替换订阅地址 只支持SSR订阅
+
         
         #上面订阅地址为免费订阅~ClashR暂不支持~仅在此做转换测试使用~但欢迎在其他客户端使用
-        #没有条件测试~不知道能不能正常使用~请自行测试~~
+
         nodes = getAllNodes(url)
         getClash(nodes)
     
