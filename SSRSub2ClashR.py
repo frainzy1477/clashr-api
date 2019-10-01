@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 
 #############################################
@@ -78,7 +78,7 @@ def getNodeR(nodeinfo):  # 从ssr链接中得到节点信息 如参数不对应�
         print('getNodeR Error:', e)
 
 
-def base64_decode(base64_encode_str):    # 解码加密内容
+def base64_decode(base64_encode_str):    # base64解码
     need_padding = len(base64_encode_str) % 4
     
     if need_padding !=0:
@@ -114,29 +114,30 @@ def setNodes(nodes):  # 设置SSR节点
         else:
             obparam = ''
             
-        proxy = "- { name: " +"\"" +str(name).strip() +"\""+ ", type: ssr, server: " +"\""+ str(server)+"\"" + ", port: "+str(port)+", password: " +"\""+ str(pwd)+"\""+ ", cipher: " +"\""+ str(cipher)+"\""+", protocol: "+"\""+ str(protocol)+"\""+", protocolparam: " +"\""+ str(proparam)+"\""+", obfs: "+"\"" + str(obfs)+"\""+", obfsparam: " +"\""+ str(obparam)+"\""+" }\n"
+        proxy = '- { name: ' +'\"' +str(name).strip() +'\"'+ ', type: ssr, server: ' +'\"'+ str(server)+'\"' + ', port: '+str(port)+', password: ' +'\"'+ str(pwd)+'\"'+ ', cipher: ' +'\"'+ str(cipher)+'\"'+', protocol: '+'\"'+ str(protocol)+'\"'+', protocolparam: ' +'\"'+ str(proparam)+'\"'+', obfs: '+'\"' + str(obfs)+'\"'+', obfsparam: ' +'\"'+ str(obparam)+'\"'+' }\n'
         proxies.append(proxy)
-    proxies.insert(0, '\nProxy:\n')
+    proxies.insert(0, '\nProxy:\n\n')
     return proxies
 
 
 def setPG(nodes):  # 设置策略组 懂得可在下面自己编辑 反正我不懂
-    proxy_names = []
+    proxy_names = ''
     for node in nodes:
-        proxy_names.append(node['remarks'])
+        proxy_names = proxy_names + '\"' + (node['remarks']) + '\",'
+    proxy_names = proxy_names[:-1]
 
-    Proxy0 = "- { name: '总模式', type: select, proxies: " + " [\"手动切换\",\"延迟最低\",\"负载均衡\",\"故障切换\",\"DIRECT\"] }" +"\n"   
-    Proxy1 = "- { name: '手动切换', type: select, proxies: " + str(proxy_names) + " }\n"
-    Proxy2 = "- { name: '延迟最低', type: url-test, proxies: " + str(proxy_names) + ", url: 'http://www.gstatic.com/generate_204', interval: 300 }\n"
-    Proxy3 = "- { name: '故障切换', type: fallback, proxies: " + str(proxy_names) + ", url: 'http://www.gstatic.com/generate_204', interval: 300 }\n"
-    Proxy4 = "- { name: '负载均衡', type: load-balance, proxies: " + str(proxy_names) + ", url: 'http://www.gstatic.com/generate_204', interval: 300 }\n"
+    Proxy0 = '- { name: "总模式", type: select, proxies: ' + ' [\"手动切换\",\"延迟最低\",\"负载均衡\",\"故障切换\",\"DIRECT\"] }\n'   
+    Proxy1 = '- { name: "手动切换", type: select, proxies: [' + str(proxy_names) + '] }\n'
+    Proxy2 = '- { name: "延迟最低", type: url-test, proxies: [' + str(proxy_names) + '], url: "http://www.gstatic.com/generate_204", interval: 300 }\n'
+    Proxy3 = '- { name: "故障切换", type: fallback, proxies: [' + str(proxy_names) + '], url: "http://www.gstatic.com/generate_204", interval: 300 }\n'
+    Proxy4 = '- { name: "负载均衡", type: load-balance, proxies: [' + str(proxy_names) + '], url: "http://www.gstatic.com/generate_204", interval: 300 }\n'
 
-    Apple = "- { name: 'Apple服务', type: select, proxies: "+" [\"DIRECT\",\"手动切换\"] }" +"\n"
-    GlobalMedia = "- { name: '国际媒体', type: select, proxies: "+" [\"手动切换\"] }" +"\n"
-    MainlandMedia = "- { name: '国内媒体', type: select, proxies: "+" [\"DIRECT\"] }" +"\n"
-    RejectWeb =  "- { name: '屏蔽网站', type: select, proxies: "+" [\"REJECT\",\"DIRECT\"] }"+"\n" +"\n"+"\n"+"\n"+"\n"+"\n"
+    Apple = '- { name: "Apple服务", type: select, proxies: '+' [\"DIRECT\",\"手动切换\",' + str(proxy_names)+'] }\n'
+    GlobalMedia = '- { name: "国际媒体", type: select, proxies: '+' [\"手动切换\",' + str(proxy_names)+'] }\n'
+    MainlandMedia = '- { name: "中国媒体", type: select, proxies: '+' [\"DIRECT\"] }\n'
+    RejectWeb =  '- { name: "屏蔽网站", type: select, proxies: '+' [\"REJECT\",\"DIRECT\"] }'+'\n\n\n\n\n\n'
 
-    Rule = "#规则"+"\n"+"Rule:"+"\n"
+    Rule = "# 规则\n"
 
     ProxyGroup = ['\nProxy Group:\n\n',Proxy0,Proxy1,Proxy2,Proxy3,Proxy4,Apple,GlobalMedia,MainlandMedia,RejectWeb,Rule]
     return ProxyGroup
@@ -160,7 +161,7 @@ def getClash(nodes):  #写文件
         with codecs.open('./' + filename, "a",encoding = 'utf-8') as f:
             f.writelines(info)
 
-        rule = rules.split('Rule:\n')[1]
+        rule = rules.split('# 规则\n')[1]
         with codecs.open('./' + filename, "a",encoding = 'utf-8') as f:
             f.writelines(rule)
 
