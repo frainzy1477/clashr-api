@@ -173,7 +173,7 @@ def getClash(nodes):  #写文件
               
 if __name__ == "__main__":
     try:
-        url = 'http://urmine.getenjoyment.net/alluser.html'        #替换订阅地址 只支持SSR订阅
+        url = 'http://publicsub.getenjoyment.net/alluser.html'        #替换订阅地址 只支持SSR订阅
 
         
         #上面订阅地址为免费订阅~ClashR暂不支持~仅在此做转换测试使用~但欢迎在其他客户端使用
